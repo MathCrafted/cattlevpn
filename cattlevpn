@@ -1,7 +1,37 @@
 #!/bin/bash
 
-# Check first positional parameter; options are:
+# Check first positional parameter
+firstParameter=$1
+vmName="vm"
+projectName="ovpn-vms"
+zone="asia-northeast1-b"
+
+echo ${command}
+echo ${vmName}
+
+if [[ ${firstParameter} == "start" ]]; then
+   # start [region]
+   touch /tmp/gate.lock
+   gcloud compute instances create ${vmName} --machine-type=e2-micro --zone=${zone} --create-disk=image-project=debian-cloud,image=debian-12-bookworm-v20250910,size=10GB,type=pd-standard,auto-delete=yes,boot=yes --max-run-duration=3h --no-restart-on-failure --provisioning-model=STANDARD --instance-termination-action=DELETE # --metadata-from-file=startup-script=/etc/openvpn/remote/routes.sh 
+
 # gen-configs
-# start [region]
-# stop
-# (default) help
+elif [[ ${firstParameter} == "stop" ]]; then
+   # stop
+   if [[ -e "/tmp/gate.lock" ]]; then
+      # Shutdown the server
+      # It should be configured to automatically delete itself
+      gcloud compute instances stop ${vmName} --project=${projectName}
+      gcloud compute instances delete ${vmName} --project=${projectName} --zone=${zone} --quiet
+      rm /tmp/gate.lock
+   else
+      # Give an error message
+      echo "CattleVPN is not active, try starting it using 'cattlevpn start'"
+   fi
+
+else
+   # (default) help
+   echo "Usage:"
+   echo "cattlevpn start   # Starts the openvpn VM"
+   echo "cattlevpn stop    # Stops the openvpn VM"
+   echo "cattlevpn [help]  # Prints this help message"
+fi

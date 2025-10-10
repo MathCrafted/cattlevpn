@@ -2,7 +2,7 @@
 
 # More of documentation of installed modules than a script
 
-sudo pacman -S openvpn dnsutils easyrsa
+#sudo pacman -S openvpn dnsutils easyrsa
 
 # A section where I should probably copy files
 
