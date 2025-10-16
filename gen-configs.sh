@@ -4,23 +4,27 @@
 
 # Nuke and pave any old certs
 rm -r /etc/openvpn/ca
-make-cadir /etc/openvpn/ca
+mkdir -p /etc/openvpn/ca
 cd /etc/openvpn/ca
+export EASYRSA=/etc/openvpn/ca
 
 # Generate the certificate authority cert
-./easyrsa init-pki
-./easyrsa build-ca nopass
+easyrsa --batch init-pki
+easyrsa --batch build-ca nopass
 
 # Generate server cert
-./easyrsa gen-req server nopass
-./easyrsa sign-req server server
+easyrsa --batch gen-req server nopass
+easyrsa --batch sign-req server server
 
 # Generate client certs
-./easyrsa gen-req client nopass
-./easyrsa sign-req client client
+easyrsa --batch gen-req client nopass
+easyrsa --batch sign-req client client
 
 # Generate some Diffie-Helman keys (hope I spelled that right)
-./easyrsa gen-dh
+easyrsa --batch gen-dh 
+
+# Make the certs accessible
+sudo chmod -R go+rx /etc/openvpn/ca/pki
 
 # Create server config
 serverPath=/etc/openvpn/ca/server.conf
@@ -38,13 +42,19 @@ echo "log-append /var/log/openvpn.log" >> ${serverPath}
 echo "include /etc/openvpn/server/routes.conf" >> ${serverPath}
 echo "<ca>" >> ${serverPath}
 cat ./pki/ca.crt >> ${serverPath}
-echo "</ca>\n<cert>" >> ${serverPath}
+echo -e "</ca>\n<cert>" >> ${serverPath}
 cat ./pki/issued/server.crt >> ${serverPath}
-echo "</cert>\n<key>" >> ${serverPath}
+echo -e "</cert>\n<key>" >> ${serverPath}
 cat ./pki/private/server.key >> ${serverPath}
-echo "</key>\n<dh>" >> ${serverPath}
+echo -e "</key>\n<dh>" >> ${serverPath}
 cat ./pki/dh.pem >> ${serverPath}
 echo "</dh>" >> ${serverPath}
+
+# Create setup script
+mkdir -p /etc/openvpn/remote
+cat /etc/openvpn/remote/routes.sh > /etc/openvpn/remote/setup.sh
+cat ${serverPath} | sed -r 's/^.+$/echo \"&\" >> \/etc\/openvpn\/server.conf/g' >> /etc/openvpn/remote/setup.sh
+echo "openvpn /etc/openvpn/server/server.conf" >> /etc/openvpn/remote/setup.sh
 
 # Create client config
 clientPath=/etc/openvpn/client/client.ovpn
@@ -56,12 +66,12 @@ echo "resolv-retry infinite" >> ${clientPath}
 echo "persist-key" >> ${clientPath}
 echo "persist-tun" >> ${clientPath}
 echo "verb 3" >> ${clientPath}
-echo "dhcp-options DNS 1.1.1.1" >> ${clientPath}
-echo "dhcp-options DNS 8.8.8.8" >> ${clientPath}
+echo "dhcp-option DNS 1.1.1.1" >> ${clientPath}
+echo "dhcp-option DNS 8.8.8.8" >> ${clientPath}
 echo "<ca>" >> ${clientPath}
 cat ./pki/ca.crt >> ${clientPath}
-echo "</ca>\n<cert>" >> ${clientPath}
+echo -e "</ca>\n<cert>" >> ${clientPath}
 cat ./pki/issued/client.crt >> ${clientPath}
-echo "</cert>\n<key>" >> ${clientPath}
+echo -e "</cert>\n<key>" >> ${clientPath}
 cat ./pki/private/client.key >> ${clientPath}
 echo "</key>" >> ${clientPath}

@@ -6,13 +6,15 @@ vmName="vm"
 projectName="ovpn-vms"
 zone="asia-northeast1-b"
 
-echo ${command}
-echo ${vmName}
+echo "Command is ${firstParameter}"
+echo "VM Name is ${vmName}"
 
 if [[ ${firstParameter} == "start" ]]; then
    # start [region]
    touch /tmp/gate.lock
-   gcloud compute instances create ${vmName} --machine-type=e2-micro --zone=${zone} --create-disk=image-project=debian-cloud,image=debian-12-bookworm-v20250910,size=10GB,type=pd-standard,auto-delete=yes,boot=yes --max-run-duration=3h --no-restart-on-failure --provisioning-model=STANDARD --instance-termination-action=DELETE # --metadata-from-file=startup-script=/etc/openvpn/remote/routes.sh 
+   gcloud compute instances create ${vmName} --machine-type=e2-micro --zone=${zone} --create-disk=image-project=debian-cloud,image=debian-12-bookworm-v20250910,size=10GB,type=pd-standard,auto-delete=yes,boot=yes --max-run-duration=3h --no-restart-on-failure --provisioning-model=STANDARD --instance-termination-action=DELETE #--metadata-from-file=startup-script=/etc/openvpn/remote/setup.sh
+gcloud compute ssh jrhaley324@${vmName} --zone=${zone} --command="sudo bash" < /etc/openvpn/remote/setup.sh 
+openvpn --remote $(gcloud compute instances list | grep "RUNNING" | grep ${vmName} | grep -Eo "([[:digit:]]){1,3}\.([[:digit:]]){1,3}\.([[:digit:]]){1,3}\.([[:digit:]]){1,3}\s+RUNNING" | grep -Eo "([[:digit:]]){1,3}\.([[:digit:]]){1,3}\.([[:digit:]]){1,3}\.([[:digit:]]){1,3}") 1194 --config /etc/openvpn/client/client.ovpn
 
 # gen-configs
 elif [[ ${firstParameter} == "stop" ]]; then
