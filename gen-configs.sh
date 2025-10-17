@@ -2,6 +2,9 @@
 # A script to generate certificates for OpenVPN server
 # Requires Easy-RSA
 
+# Constants
+port=1194
+
 # Nuke and pave any old certs
 rm -r /etc/openvpn/ca
 mkdir -p /etc/openvpn/ca
@@ -28,7 +31,7 @@ sudo chmod -R go+rx /etc/openvpn/ca/pki
 
 # Create server config
 serverPath=/etc/openvpn/ca/server.conf
-echo "port 1194" > ${serverPath}
+echo "port ${port}" > ${serverPath}
 echo "proto udp" >> ${serverPath}
 echo "dev tun" >> ${serverPath}
 echo "server 172.16.0.0 255.255.255.0" >> ${serverPath}
@@ -39,7 +42,10 @@ echo "group nogroup" >> ${serverPath}
 echo "verb 3" >> ${serverPath}
 echo "status /var/log/openvpn-status.log" >> ${serverPath}
 echo "log-append /var/log/openvpn.log" >> ${serverPath}
-echo "include /etc/openvpn/server/routes.conf" >> ${serverPath}
+#echo "include /etc/openvpn/server/routes.conf" >> ${serverPath}
+echo -e 'push \"redirect-gateway def1 bypass-dhcp\"' >> ${serverPath}
+echo -e 'push \"dhcp-option DNS 1.1.1.1\"' >> ${serverPath}
+echo -e 'push \"dhcp-option DNS 8.8.8.8\"' >> ${serverPath}
 echo "<ca>" >> ${serverPath}
 cat ./pki/ca.crt >> ${serverPath}
 echo -e "</ca>\n<cert>" >> ${serverPath}
@@ -52,8 +58,13 @@ echo "</dh>" >> ${serverPath}
 
 # Create setup script
 mkdir -p /etc/openvpn/remote
-cat /etc/openvpn/remote/routes.sh > /etc/openvpn/remote/setup.sh
-cat ${serverPath} | sed -r 's/^.+$/echo \"&\" >> \/etc\/openvpn\/server.conf/g' >> /etc/openvpn/remote/setup.sh
+echo "" > /etc/openvpn/remote/setup.sh
+echo "mkdir -p /etc/openvpn/" >> /etc/openvpn/remote/setup.sh
+echo "mkdir -p /etc/openvpn/server" >> /etc/openvpn/remote/setup.sh
+echo "mkdir -p /etc/openvpn/remote" >> /etc/openvpn/remote/setup.sh
+echo 'echo "" > /etc/openvpn/server/server.conf' >> /etc/openvpn/remote/setup.sh
+cat ${serverPath} | sed -r 's/^.+$/echo \"&\" >> \/etc\/openvpn\/server\/server.conf/g' >> /etc/openvpn/remote/setup.sh
+cat /etc/openvpn/remote/routes.sh >> /etc/openvpn/remote/setup.sh
 echo "openvpn /etc/openvpn/server/server.conf" >> /etc/openvpn/remote/setup.sh
 
 # Create client config
