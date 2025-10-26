@@ -64,8 +64,14 @@ echo "mkdir -p /etc/openvpn/server" >> /etc/openvpn/remote/setup.sh
 echo "mkdir -p /etc/openvpn/remote" >> /etc/openvpn/remote/setup.sh
 echo 'echo "" > /etc/openvpn/server/server.conf' >> /etc/openvpn/remote/setup.sh
 cat ${serverPath} | sed -r 's/^.+$/echo \"&\" >> \/etc\/openvpn\/server\/server.conf/g' >> /etc/openvpn/remote/setup.sh
-cat /etc/openvpn/remote/routes.sh >> /etc/openvpn/remote/setup.sh
-echo "openvpn /etc/openvpn/server/server.conf" >> /etc/openvpn/remote/setup.sh
+echo "apt -y install dnsutils openvpn" >> /etc/openvpn/remote/setup.sh
+#cat /etc/openvpn/remote/routes.sh >> /etc/openvpn/remote/setup.sh
+#echo "sudo mkdir -p /proc/sys/net/ipv4" >> /etc/openvpn/remote/setup.sh
+echo "sudo echo 1 > /proc/sys/net/ipv4/ip_forward" >> /etc/openvpn/remote/setup.sh
+echo "sudo sysctl -w net.ipv4.ip_forward=1" >> /etc/openvpn/remote/setup.sh
+echo 'echo $(ip route get 8.8.8.8 | grep -Eo "via\s\S+\s\S+\s\S+" | grep -Eo "\S+$")' >> /etc/openvpn/remote/setup.sh
+echo 'sudo iptables -t nat -A POSTROUTING -s 172.16.0.0/24 -j MASQUERADE -o $(ip route get 8.8.8.8 | grep -Eo "via\s\S+\s\S+\s\S+" | grep -Eo "\S+$")' >> /etc/openvpn/remote/setup.sh
+echo "sudo openvpn /etc/openvpn/server/server.conf &" >> /etc/openvpn/remote/setup.sh
 
 # Create client config
 clientPath=/etc/openvpn/client/client.ovpn
